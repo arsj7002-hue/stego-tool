@@ -1,289 +1,825 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>StegoTool — Steganography Suite</title>
-  <link rel="stylesheet" href="/static/style.css" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>StegoTool — Classified Operations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Outfit:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --void:#07050E;
+  --deep:#0D0A1C;
+  --surface:#130F22;
+  --glass:rgba(255,255,255,0.04);
+  --glass2:rgba(255,255,255,0.07);
+  --glass3:rgba(255,255,255,0.02);
+  --mag:#FF2D8B;
+  --mag2:rgba(255,45,139,0.15);
+  --mag3:rgba(255,45,139,0.07);
+  --lime:#AAFF47;
+  --lime2:rgba(170,255,71,0.12);
+  --lime3:rgba(170,255,71,0.05);
+  --violet:#7B4FFF;
+  --violet2:rgba(123,79,255,0.18);
+  --sky:#38CFFF;
+  --sky2:rgba(56,207,255,0.1);
+  --text:#EDE8F8;
+  --muted:#9B8FC0;
+  --dim:#5A507A;
+  --border:rgba(255,255,255,0.08);
+  --r:12px;
+  --FD:'Syne',sans-serif;
+  --FB:'Outfit',sans-serif;
+  --FM:'Fira Code',monospace;
+}
+html{scroll-behavior:smooth}
+body{background:var(--void);color:var(--text);font-family:var(--FB);font-size:14px;min-height:100vh;overflow-x:hidden;}
+
+/* BG */
+.bg-mesh{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+.bg-mesh::before{content:'';position:absolute;width:800px;height:800px;background:radial-gradient(circle,rgba(123,79,255,0.2) 0%,transparent 65%);top:-200px;left:-150px;animation:d1 20s ease-in-out infinite alternate;}
+.bg-mesh::after{content:'';position:absolute;width:600px;height:600px;background:radial-gradient(circle,rgba(255,45,139,0.15) 0%,transparent 65%);bottom:-100px;right:-100px;animation:d2 25s ease-in-out infinite alternate;}
+.bg-lime{position:fixed;width:500px;height:500px;background:radial-gradient(circle,rgba(170,255,71,0.09) 0%,transparent 70%);bottom:15%;left:35%;z-index:0;pointer-events:none;animation:d3 30s ease-in-out infinite alternate;}
+@keyframes d1{0%{transform:translate(0,0)}100%{transform:translate(100px,70px)}}
+@keyframes d2{0%{transform:translate(0,0)}100%{transform:translate(-70px,-50px)}}
+@keyframes d3{0%{transform:translate(0,0)}100%{transform:translate(50px,-30px)}}
+.bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,0.022) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.022) 1px,transparent 1px);background-size:60px 60px;mask-image:radial-gradient(ellipse 90% 90% at 50% 50%,black 20%,transparent 100%);}
+
+/* BOOT */
+#boot{position:fixed;inset:0;z-index:999;background:var(--void);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1.8rem;transition:opacity .7s ease;}
+#boot.off{opacity:0;pointer-events:none}
+.boot-logo-wrap{position:relative;width:90px;height:90px;margin-bottom:.5rem;}
+.boot-logo-wrap svg{animation:spin-r 4s linear infinite;width:100%;height:100%;}
+.boot-logo-center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--FM);font-size:.5rem;color:var(--dim);letter-spacing:.15em;}
+.boot-title{font-family:var(--FD);font-size:3.5rem;font-weight:800;letter-spacing:-.02em;background:linear-gradient(130deg,#fff 0%,var(--mag) 45%,var(--lime) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-align:center;}
+.boot-bar-wrap{width:240px;height:1px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden;}
+.boot-bar{height:100%;width:0;background:linear-gradient(90deg,var(--violet),var(--mag),var(--lime));box-shadow:0 0 10px var(--mag);}
+.boot-msg{font-family:var(--FM);font-size:.57rem;color:var(--dim);letter-spacing:.14em;text-align:center;height:.9rem;}
+@keyframes spin-r{to{transform:rotate(360deg)}}
+
+/* HEADER */
+header{position:sticky;top:0;z-index:50;background:rgba(7,5,14,0.8);backdrop-filter:blur(24px);border-bottom:1px solid var(--border);padding:0 2.5rem;height:60px;display:flex;align-items:center;justify-content:space-between;}
+.hlogo{display:flex;align-items:center;gap:.85rem}
+.hlogo-glyph{font-family:var(--FD);font-size:1.6rem;font-weight:800;line-height:1;background:linear-gradient(135deg,var(--violet),var(--mag));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hlogo-name{font-family:var(--FD);font-size:1rem;font-weight:700;color:#fff;letter-spacing:-.01em;line-height:1.1;}
+.hlogo-name span{background:linear-gradient(90deg,var(--mag),var(--lime));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hlogo-sub{font-family:var(--FM);font-size:.46rem;color:var(--dim);letter-spacing:.2em;display:block;margin-top:2px;}
+.hpill{display:flex;align-items:center;gap:.5rem;padding:.28rem .9rem;border-radius:20px;border:1px solid rgba(170,255,71,0.2);background:rgba(170,255,71,0.05);}
+.hpill-dot{width:5px;height:5px;border-radius:50%;background:var(--lime);box-shadow:0 0 8px var(--lime);animation:blink 2s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.hpill-txt{font-family:var(--FM);font-size:.5rem;color:var(--lime);letter-spacing:.1em;}
+.hright{display:flex;align-items:center;gap:1.5rem;}
+.hbadge{padding:.28rem .7rem;border-radius:6px;background:var(--glass);border:1px solid var(--border);display:flex;flex-direction:column;gap:1px;}
+.hbadge-k{font-family:var(--FM);font-size:.44rem;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;}
+.hbadge-v{font-family:var(--FM);font-size:.6rem;color:var(--violet);font-weight:500;}
+#clock{font-family:var(--FM);font-size:.8rem;font-weight:500;background:linear-gradient(90deg,var(--mag),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:.06em;}
+
+/* TABS */
+nav.tabs{position:sticky;top:60px;z-index:40;display:grid;grid-template-columns:repeat(4,1fr);background:rgba(7,5,14,0.85);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);}
+.tab{display:flex;flex-direction:column;align-items:center;padding:.8rem 1rem .65rem;gap:.18rem;background:none;border:none;cursor:pointer;color:var(--dim);border-bottom:2px solid transparent;transition:all .2s;font-family:var(--FB);position:relative;}
+.tab:hover{color:var(--muted);background:var(--glass);}
+.tab.on{color:#fff;border-bottom-color:var(--mag);background:var(--glass2);}
+.tab-num{font-family:var(--FM);font-size:.46rem;letter-spacing:.15em;color:var(--mag);opacity:0;transition:opacity .2s;position:absolute;top:.45rem;right:.9rem;}
+.tab.on .tab-num,.tab:hover .tab-num{opacity:.8}
+.tab-lbl{font-family:var(--FD);font-size:.7rem;font-weight:700;letter-spacing:.02em;}
+.tab-dsc{font-size:.57rem;color:var(--dim);}
+.tab.on .tab-dsc{color:var(--muted);}
+
+/* MAIN */
+main{position:relative;z-index:5;max-width:1380px;margin:0 auto;padding:1.8rem 2.5rem;min-height:calc(100vh - 144px);}
+
+/* PANELS */
+.panel{display:none;animation:fi .3s ease;}
+.panel.on{display:flex;flex-direction:column;gap:1.4rem;}
+@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;}
+@media(max-width:900px){.pgrid{grid-template-columns:1fr}}
+
+/* HERO BAR */
+.panel-hero{display:flex;align-items:flex-end;justify-content:space-between;padding:1.5rem 1.8rem;background:var(--glass);border:1px solid var(--border);border-radius:var(--r);backdrop-filter:blur(10px);position:relative;overflow:hidden;}
+.panel-hero::after{content:'';position:absolute;top:-50px;right:-50px;width:220px;height:220px;background:radial-gradient(circle,var(--mag2),transparent 70%);pointer-events:none;}
+.panel-hero-title{font-family:var(--FD);font-size:2.2rem;font-weight:800;color:#fff;line-height:1;letter-spacing:-.03em;}
+.panel-hero-title span{background:linear-gradient(90deg,var(--mag),var(--lime));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.panel-hero-sub{font-size:.74rem;color:var(--muted);margin-top:.35rem;font-weight:300;}
+.panel-hero-tag{font-family:var(--FM);font-size:.5rem;color:var(--muted);letter-spacing:.12em;text-align:right;line-height:2;opacity:.7;}
+
+/* CARDS */
+.card{background:var(--glass);border:1px solid var(--border);border-radius:var(--r);display:flex;flex-direction:column;backdrop-filter:blur(12px);position:relative;overflow:hidden;transition:border-color .25s,box-shadow .25s;}
+.card::before{content:'';position:absolute;inset:0;border-radius:var(--r);background:linear-gradient(140deg,rgba(255,255,255,0.025) 0%,transparent 55%);pointer-events:none;}
+.card:hover{border-color:rgba(255,45,139,0.22);box-shadow:0 4px 40px rgba(255,45,139,0.06);}
+.card.alt:hover{border-color:rgba(170,255,71,0.2);box-shadow:0 4px 40px rgba(170,255,71,0.06);}
+.cacc{height:1px;background:linear-gradient(90deg,var(--mag),var(--violet),transparent);box-shadow:0 0 8px rgba(255,45,139,0.5);}
+.cacc.alt{background:linear-gradient(90deg,var(--lime),var(--sky),transparent);box-shadow:0 0 8px rgba(170,255,71,0.4);}
+.chead{padding:1.3rem 1.5rem 1rem;display:flex;gap:.9rem;align-items:flex-start;}
+.chead-num{font-family:var(--FD);font-size:3rem;font-weight:800;line-height:.8;flex-shrink:0;margin-top:-.15rem;background:linear-gradient(180deg,rgba(255,45,139,0.55) 0%,transparent 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.chead-num.alt{background:linear-gradient(180deg,rgba(170,255,71,0.55) 0%,transparent 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.cbadge{display:inline-flex;align-items:center;gap:.3rem;font-family:var(--FM);font-size:.48rem;letter-spacing:.15em;padding:.18rem .6rem;border-radius:20px;margin-bottom:.35rem;}
+.cbadge.m{background:var(--mag2);color:var(--mag);border:1px solid rgba(255,45,139,0.22);}
+.cbadge.l{background:var(--lime2);color:var(--lime);border:1px solid rgba(170,255,71,0.18);}
+.chead h2{font-family:var(--FD);font-size:1.08rem;font-weight:700;color:#fff;letter-spacing:-.01em;margin-bottom:.2rem;}
+.chead p{font-size:.72rem;color:var(--muted);line-height:1.55;font-weight:300;}
+.cbody{padding:1.1rem 1.5rem 1.3rem;flex:1;display:flex;flex-direction:column;gap:.9rem;}
+
+/* FIELDS */
+.flbl{font-family:var(--FM);font-size:.52rem;font-weight:500;letter-spacing:.14em;color:var(--dim);margin-bottom:.38rem;display:block;text-transform:uppercase;}
+.flbl em{color:var(--mag);font-style:normal;}
+
+/* DROP ZONES */
+.dz{border:1px dashed rgba(255,255,255,0.1);border-radius:8px;padding:1.1rem;text-align:center;cursor:pointer;background:var(--glass3);transition:all .2s;position:relative;overflow:hidden;}
+.dz::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--mag3),transparent);opacity:0;transition:opacity .25s;pointer-events:none;}
+.dz:hover{border-color:rgba(255,45,139,0.3);}
+.dz:hover::after{opacity:1;}
+.dz.over,.dz.got{border-color:var(--mag);border-style:solid;background:var(--mag3);}
+.dz.got::after{opacity:1;}
+.dz-icon{width:32px;height:32px;border-radius:8px;background:var(--glass2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;margin:0 auto .45rem;font-size:.85rem;transition:all .25s;position:relative;z-index:1;}
+.dz:hover .dz-icon,.dz.got .dz-icon{background:var(--mag2);border-color:rgba(255,45,139,0.3);box-shadow:0 0 12px rgba(255,45,139,0.2);}
+.dz-txt{font-size:.76rem;color:var(--muted);font-weight:500;position:relative;z-index:1;}
+.dz-hint{font-size:.6rem;color:var(--dim);margin-top:.18rem;position:relative;z-index:1;}
+.dz.sm{padding:.62rem;}
+.dz.lg{padding:1.7rem;}
+.pwrap{margin-top:.45rem;}
+.pwrap img{max-width:100%;max-height:75px;border-radius:5px;border:1px solid var(--border);object-fit:cover;display:block;}
+
+/* TEXTAREA */
+textarea{background:var(--glass3);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:.75rem .95rem;font-family:var(--FM);font-size:.78rem;resize:vertical;transition:all .2s;width:100%;line-height:1.6;}
+textarea:focus{outline:none;border-color:rgba(255,45,139,0.45);background:var(--mag3);box-shadow:0 0 0 3px rgba(255,45,139,0.07);}
+textarea::placeholder{color:var(--dim);}
+.cc{font-family:var(--FM);font-size:.52rem;color:var(--dim);text-align:right;margin-top:.28rem;}
+
+/* TOGGLE */
+.trow{display:flex;align-items:center;}
+.tlbl{display:flex;align-items:center;gap:.65rem;cursor:pointer;user-select:none;font-size:.74rem;color:var(--muted);font-weight:400;}
+.tlbl input{display:none;}
+.ttrack{width:36px;height:19px;background:var(--glass2);border:1px solid var(--border);border-radius:10px;position:relative;flex-shrink:0;transition:all .2s;}
+.tthumb{position:absolute;top:3px;left:3px;width:11px;height:11px;background:var(--dim);border-radius:50%;transition:all .2s;}
+.tlbl input:checked+.ttrack{background:var(--mag2);border-color:rgba(255,45,139,0.35);}
+.tlbl input:checked+.ttrack .tthumb{transform:translateX(17px);background:var(--mag);box-shadow:0 0 8px var(--mag);}
+.kslot{max-height:0;overflow:hidden;opacity:0;transition:max-height .3s,opacity .3s;}
+.kslot.open{max-height:130px;opacity:1;}
+
+/* BUTTONS */
+.btn{display:flex;align-items:center;justify-content:center;gap:.55rem;padding:.8rem 1.6rem;border-radius:8px;font-family:var(--FD);font-size:.7rem;font-weight:700;letter-spacing:.04em;border:none;cursor:pointer;transition:all .22s;margin-top:auto;position:relative;overflow:hidden;}
+.btn.m{background:linear-gradient(135deg,var(--mag),#C4006A);color:#fff;box-shadow:0 4px 18px rgba(255,45,139,0.3);}
+.btn.m:hover{box-shadow:0 6px 30px rgba(255,45,139,0.5);transform:translateY(-2px);}
+.btn.l{background:linear-gradient(135deg,#8BD520,var(--lime));color:var(--void);box-shadow:0 4px 18px rgba(170,255,71,0.25);}
+.btn.l:hover{box-shadow:0 6px 30px rgba(170,255,71,0.45);transform:translateY(-2px);}
+.btn.lg{padding:.9rem 1.8rem;font-size:.76rem;}
+.btn:disabled{opacity:.38;cursor:not-allowed;transform:none!important;box-shadow:none!important;}
+.barr{transition:transform .2s;display:inline-block;}
+.btn:hover .barr{transform:translateX(4px);}
+.btn-shine{position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.13),transparent);transform:translateX(-100%);transition:transform .45s;pointer-events:none;}
+.btn:hover .btn-shine{transform:translateX(100%);}
+
+/* RESULTS */
+.rzone:empty{display:none;}
+.rok{background:rgba(170,255,71,0.04);border:1px solid rgba(170,255,71,0.15);border-radius:8px;padding:1rem 1.2rem;margin-top:.4rem;}
+.rerr{background:rgba(255,45,139,0.05);border:1px solid rgba(255,45,139,0.22);border-radius:8px;padding:1rem 1.2rem;color:#FF6BA7;font-size:.74rem;margin-top:.4rem;font-family:var(--FM);}
+.rtitle{font-family:var(--FM);font-size:.52rem;letter-spacing:.15em;margin-bottom:.65rem;display:flex;align-items:center;gap:.4rem;text-transform:uppercase;}
+.rtitle.m{color:var(--mag)}.rtitle.l{color:var(--lime)}.rtitle.e{color:var(--mag)}
+.rrow{display:flex;gap:.6rem;margin:.25rem 0;font-size:.75rem;align-items:baseline;}
+.rl{font-family:var(--FM);font-size:.52rem;color:var(--dim);min-width:115px;flex-shrink:0;text-transform:uppercase;letter-spacing:.07em;}
+.rv{color:var(--text);word-break:break-all;}
+.dlbtn{display:inline-flex;align-items:center;gap:.4rem;margin-top:.75rem;padding:.42rem 1.05rem;background:linear-gradient(135deg,var(--mag),#C4006A);color:#fff;border-radius:6px;font-family:var(--FD);font-size:.6rem;font-weight:700;letter-spacing:.04em;text-decoration:none;transition:all .2s;box-shadow:0 2px 12px rgba(255,45,139,0.22);}
+.dlbtn:hover{box-shadow:0 4px 20px rgba(255,45,139,0.45);transform:translateY(-1px);}
+.dlbtn.l{background:linear-gradient(135deg,#8BD520,var(--lime));color:var(--void);box-shadow:0 2px 12px rgba(170,255,71,0.2);}
+.dlbtn.l:hover{box-shadow:0 4px 20px rgba(170,255,71,0.45);}
+.msgbox{background:var(--glass3);border:1px solid var(--border);border-radius:6px;padding:.75rem .95rem;margin-top:.55rem;color:var(--text);font-family:var(--FM);font-size:.76rem;word-break:break-word;line-height:1.7;max-height:200px;overflow-y:auto;}
+
+/* DUAL DROP */
+.dualdrop{display:grid;grid-template-columns:1fr 28px 1fr;gap:.45rem;align-items:start;}
+.dualarr{display:flex;align-items:center;justify-content:center;padding-top:2rem;color:var(--dim);font-size:.85rem;}
+
+/* INFO */
+.ibox{background:var(--sky2);border:1px solid rgba(56,207,255,0.14);border-radius:6px;padding:.65rem .9rem;font-size:.7rem;color:var(--muted);display:flex;gap:.5rem;align-items:flex-start;line-height:1.55;font-weight:300;}
+.ibox-ico{color:var(--sky);flex-shrink:0;}
+
+/* CHIP */
+.chip{display:none;font-family:var(--FM);font-size:.58rem;color:var(--lime);background:var(--lime2);border:1px solid rgba(170,255,71,0.18);border-radius:4px;padding:.2rem .6rem;margin-top:.38rem;}
+.chip.show{display:inline-block;}
+
+/* HOW STRIP */
+.howstrip{display:grid;grid-template-columns:repeat(4,1fr);background:var(--glass);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;backdrop-filter:blur(10px);}
+.hwitem{padding:1.1rem 1.3rem;display:flex;gap:.75rem;align-items:flex-start;position:relative;}
+.hwitem::after{content:'';position:absolute;right:0;top:20%;bottom:20%;width:1px;background:var(--border);}
+.hwitem:last-child::after{display:none;}
+.hwnum{font-family:var(--FD);font-size:2rem;font-weight:800;background:linear-gradient(180deg,var(--mag) 0%,transparent 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:.9;flex-shrink:0;}
+.hwbody{font-size:.7rem;color:var(--muted);line-height:1.55;padding-top:.12rem;font-weight:300;}
+.hwbody strong{color:#fff;font-weight:600;display:block;margin-bottom:.1rem;font-family:var(--FD);font-size:.74rem;}
+
+/* KEYS LAYOUT */
+.klayout{display:grid;grid-template-columns:1fr 1.15fr;gap:1.4rem;align-items:start;}
+@media(max-width:900px){.klayout{grid-template-columns:1fr}}
+.kpanel{background:var(--glass);border:1px solid var(--border);border-radius:var(--r);padding:1.7rem;backdrop-filter:blur(12px);position:sticky;top:148px;}
+.ktitle{font-family:var(--FD);font-size:2.4rem;font-weight:800;line-height:1.05;letter-spacing:-.03em;margin-bottom:.75rem;}
+.ktitle span{background:linear-gradient(90deg,var(--mag),var(--lime));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.kdesc{font-size:.75rem;color:var(--muted);line-height:1.7;margin-bottom:1.2rem;font-weight:300;padding-bottom:1.1rem;border-bottom:1px solid var(--border);}
+.kflow{display:flex;flex-direction:column;gap:.45rem;margin-bottom:1.2rem;}
+.kstep{display:flex;align-items:center;gap:.85rem;padding:.7rem;background:var(--glass2);border:1px solid var(--border);border-radius:8px;}
+.kstep-badge{width:44px;height:44px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:var(--FM);font-size:.58rem;font-weight:500;}
+.kstep-badge.m{background:var(--mag2);color:var(--mag);border:1px solid rgba(255,45,139,0.22);}
+.kstep-badge.l{background:var(--lime2);color:var(--lime);border:1px solid rgba(170,255,71,0.18);}
+.kstep-badge.v{background:var(--violet2);color:var(--violet);border:1px solid rgba(123,79,255,0.22);}
+.kstep-lbl{font-size:.71rem;color:var(--muted);line-height:1.4;font-weight:300;}
+.kstep-arrow{padding:.15rem 0 .15rem 1.5rem;color:var(--dim);font-size:.6rem;font-family:var(--FM);}
+.krule{display:flex;gap:.65rem;align-items:flex-start;padding:.7rem;background:var(--glass2);border:1px solid var(--border);border-radius:7px;font-size:.72rem;color:var(--muted);line-height:1.5;margin-bottom:.5rem;font-weight:300;}
+.krule strong{color:#fff;font-weight:600;}
+.kspecs{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:1.1rem;}
+.kspec{background:var(--glass2);border:1px solid var(--border);border-radius:7px;padding:.6rem .75rem;}
+.kspec-k{font-family:var(--FM);font-size:.47rem;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.22rem;}
+.kspec-v{font-family:var(--FM);font-size:.65rem;color:var(--violet);font-weight:500;}
+.pembox{background:var(--glass3);border:1px solid var(--border);border-radius:6px;padding:.6rem;font-family:var(--FM);font-size:.54rem;color:var(--dim);white-space:pre-wrap;word-break:break-all;max-height:80px;overflow-y:auto;margin-top:.35rem;line-height:1.6;}
+
+/* SPINNER */
+.spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.15);border-top-color:#fff;border-radius:50%;animation:spinx .6s linear infinite;}
+@keyframes spinx{to{transform:rotate(360deg)}}
+
+/* FOOTER */
+footer{position:relative;z-index:5;display:flex;align-items:center;justify-content:space-between;padding:.85rem 2.5rem;border-top:1px solid var(--border);background:rgba(7,5,14,0.7);backdrop-filter:blur(12px);font-family:var(--FM);font-size:.54rem;color:var(--dim);letter-spacing:.08em;}
+footer strong{background:linear-gradient(90deg,var(--mag),var(--lime));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:700;}
+.fmid{text-align:center;flex:1;}
+.spacer{flex:1}
+
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:var(--void)}
+::-webkit-scrollbar-thumb{background:rgba(255,45,139,0.2);border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,45,139,0.4)}
+</style>
 </head>
 <body>
 
-  <!-- HEADER -->
-  <header>
-    <div class="logo">
-      <span class="logo-icon">🔐</span>
-      <span class="logo-text">STEGO<span class="accent">TOOL</span></span>
+<div class="bg-mesh"></div>
+<div class="bg-grid"></div>
+<div class="bg-lime"></div>
+
+<!-- BOOT -->
+<div id="boot">
+  <div class="boot-logo-wrap">
+    <svg viewBox="0 0 90 90" fill="none">
+      <circle cx="45" cy="45" r="40" stroke="rgba(255,45,139,0.12)" stroke-width="1.5"/>
+      <circle cx="45" cy="45" r="40" stroke="url(#bg)" stroke-width="1.5" stroke-dasharray="70 182" stroke-linecap="round"/>
+      <circle cx="45" cy="45" r="28" stroke="rgba(123,79,255,0.15)" stroke-width="1"/>
+      <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FF2D8B"/><stop offset="100%" stop-color="#AAFF47"/></linearGradient></defs>
+    </svg>
+    <div class="boot-logo-center">BOOT</div>
+  </div>
+  <div class="boot-title">STEGOTOOL</div>
+  <div class="boot-bar-wrap"><div class="boot-bar" id="bb"></div></div>
+  <div class="boot-msg" id="bm">INITIALIZING...</div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="hlogo">
+    <div class="hlogo-glyph">S⬡</div>
+    <div>
+      <div class="hlogo-name">Stego<span>Tool</span></div>
+      <span class="hlogo-sub">Classified Operations · v2.0</span>
     </div>
-    <nav>
-      <a href="#encode-text"  class="nav-link">Hide Text</a>
-      <a href="#decode-text"  class="nav-link">Reveal Text</a>
-      <a href="#encode-image" class="nav-link">Hide Image</a>
-      <a href="#decode-image" class="nav-link">Extract Image</a>
-      <a href="#encode-file"  class="nav-link">Hide File</a>
-      <a href="#decode-file"  class="nav-link">Extract File</a>
-      <a href="#analyze"      class="nav-link">Analyze</a>
-      <a href="#keygen"       class="nav-link">Keys</a>
-    </nav>
-  </header>
+  </div>
+  <div class="hpill">
+    <div class="hpill-dot"></div>
+    <span class="hpill-txt">LOCAL · SECURE · ENCRYPTED</span>
+  </div>
+  <div class="hright">
+    <div class="hbadge"><span class="hbadge-k">Encryption</span><span class="hbadge-v">RSA-2048</span></div>
+    <div class="hbadge"><span class="hbadge-k">Cipher</span><span class="hbadge-v">AES-256-GCM</span></div>
+    <div id="clock">00:00:00</div>
+  </div>
+</header>
 
-  <!-- HERO -->
-  <section class="hero">
-    <div class="hero-content">
-      <h1>Hide Anything.<br/><span class="accent">Inside Everything.</span></h1>
-      <p class="hero-sub">Steganography tool — conceal text, images, and files inside ordinary images using LSB encoding with RSA+AES-256-GCM encryption.</p>
+<!-- TABS -->
+<nav class="tabs">
+  <button class="tab on" data-t="text" onclick="go('text')">
+    <span class="tab-num">01</span>
+    <span class="tab-lbl">Text Cipher</span>
+    <span class="tab-dsc">Hide &amp; reveal messages</span>
+  </button>
+  <button class="tab" data-t="image" onclick="go('image')">
+    <span class="tab-num">02</span>
+    <span class="tab-lbl">Image Vault</span>
+    <span class="tab-dsc">Conceal images in images</span>
+  </button>
+  <button class="tab" data-t="file" onclick="go('file')">
+    <span class="tab-num">03</span>
+    <span class="tab-lbl">File Embed</span>
+    <span class="tab-dsc">Hide any file type</span>
+  </button>
+  <button class="tab" data-t="keys" onclick="go('keys')">
+    <span class="tab-num">04</span>
+    <span class="tab-lbl">Key Forge</span>
+    <span class="tab-dsc">RSA key generation</span>
+  </button>
+</nav>
+
+<main>
+
+<!-- TEXT TAB -->
+<div class="panel on" id="p-text">
+  <div class="panel-hero">
+    <div>
+      <div class="panel-hero-title">Text <span>Cipher</span></div>
+      <div class="panel-hero-sub">LSB steganography — hide any message inside an image, invisible to the naked eye</div>
     </div>
-    <div class="hero-art">
-      <div class="pixel-grid" id="pixelGrid"></div>
+    <div class="panel-hero-tag">LSB STEGANOGRAPHY<br/>AES-256-GCM OPTIONAL<br/>LOSSLESS OUTPUT</div>
+  </div>
+  <div class="pgrid">
+    <!-- ENCODE -->
+    <div class="card" id="c-et">
+      <div class="cacc"></div>
+      <div class="chead">
+        <div class="chead-num">01</div>
+        <div>
+          <div class="cbadge m">◈ ENCODE</div>
+          <h2>Hide a Message</h2>
+          <p>Embed a classified message into any image — visually undetectable after encoding</p>
+        </div>
+      </div>
+      <div class="cbody">
+        <div>
+          <label class="flbl">Cover Image <em>PNG / JPG / BMP</em></label>
+          <div class="dz" id="dz-ct" onclick="document.getElementById('fi-ct').click()">
+            <div class="dz-icon">🖼</div>
+            <div class="dz-txt">Drop image or click to browse</div>
+            <div class="dz-hint">Any PNG, JPG or BMP</div>
+            <input type="file" id="fi-ct" accept="image/*" hidden/>
+          </div>
+          <div class="pwrap" id="pw-ct"></div>
+        </div>
+        <div>
+          <label class="flbl">Secret Message</label>
+          <textarea id="et-msg" rows="4" placeholder="Enter your classified message..."></textarea>
+          <div class="cc"><span id="cc">0</span> chars</div>
+        </div>
+        <div class="trow">
+          <label class="tlbl">
+            <input type="checkbox" id="et-enc"/>
+            <div class="ttrack"><div class="tthumb"></div></div>
+            Encrypt with RSA + AES-256-GCM
+          </label>
+        </div>
+        <div class="kslot" id="ks-pub">
+          <label class="flbl" style="margin-bottom:.42rem">Public Key <em>.pem</em></label>
+          <div class="dz sm" id="dz-pub" onclick="document.getElementById('fi-pub').click()">
+            <div class="dz-txt">Drop public.pem here</div>
+            <input type="file" id="fi-pub" accept=".pem" hidden/>
+          </div>
+        </div>
+        <button class="btn m" onclick="encodeText()"><span class="btn-shine"></span>Encode &amp; Hide <span class="barr">→</span></button>
+        <div class="rzone" id="r-et"></div>
+      </div>
     </div>
-  </section>
-
-  <main>
-
-    <!-- ── HIDE TEXT ─────────────────────────────────────────── -->
-    <section class="card" id="encode-text">
-      <div class="card-header">
-        <span class="card-icon">💬</span>
+    <!-- DECODE -->
+    <div class="card alt" id="c-dt">
+      <div class="cacc alt"></div>
+      <div class="chead">
+        <div class="chead-num alt">02</div>
         <div>
-          <h2>Hide Text in Image</h2>
-          <p>Embed a secret message into any image using LSB steganography</p>
+          <div class="cbadge l">◉ DECODE</div>
+          <h2>Reveal a Message</h2>
+          <p>Extract and decrypt any hidden message from a stego image in seconds</p>
         </div>
       </div>
-      <div class="form-grid">
-        <div class="field">
-          <label>Cover Image <span class="hint">PNG / JPG</span></label>
-          <div class="drop-zone" id="dz-cover-text">
-            <span>Drop image here or click to browse</span>
-            <input type="file" accept="image/*" id="cover-text-file" hidden/>
-          </div>
-          <div class="preview-wrap" id="prev-cover-text"></div>
-        </div>
-        <div class="field">
-          <label>Secret Message</label>
-          <textarea id="encode-text-msg" placeholder="Type your secret message here..." rows="5"></textarea>
-        </div>
-      </div>
-
-      <div class="encrypt-toggle">
-        <label class="toggle-label">
-          <input type="checkbox" id="encrypt-text-toggle"/>
-          <span class="toggle-switch"></span>
-          Encrypt with RSA before hiding
-        </label>
-        <div class="key-upload" id="pubkey-upload" style="display:none">
-          <label>Public Key (.pem)</label>
-          <div class="drop-zone small" id="dz-pubkey">
-            <span>Drop public.pem here</span>
-            <input type="file" accept=".pem" id="pubkey-file" hidden/>
-          </div>
-        </div>
-      </div>
-
-      <button class="btn btn-primary" onclick="encodeText()">
-        <span class="btn-icon">🔒</span> Hide Message
-      </button>
-      <div class="result-box" id="result-encode-text"></div>
-    </section>
-
-    <!-- ── REVEAL TEXT ────────────────────────────────────────── -->
-    <section class="card" id="decode-text">
-      <div class="card-header">
-        <span class="card-icon">🔍</span>
+      <div class="cbody">
         <div>
-          <h2>Reveal Hidden Text</h2>
-          <p>Extract a secret message from a stego image</p>
+          <label class="flbl">Stego Image</label>
+          <div class="dz lg" id="dz-dt" onclick="document.getElementById('fi-dt').click()">
+            <div class="dz-icon">🔍</div>
+            <div class="dz-txt">Drop stego image here</div>
+            <div class="dz-hint">Image containing the hidden message</div>
+            <input type="file" id="fi-dt" accept="image/*" hidden/>
+          </div>
+          <div class="pwrap" id="pw-dt"></div>
         </div>
-      </div>
-      <div class="field">
-        <label>Stego Image</label>
-        <div class="drop-zone" id="dz-stego-text">
-          <span>Drop stego image here</span>
-          <input type="file" accept="image/*" id="stego-text-file" hidden/>
+        <div class="trow">
+          <label class="tlbl">
+            <input type="checkbox" id="dt-dec"/>
+            <div class="ttrack"><div class="tthumb"></div></div>
+            Message was RSA encrypted
+          </label>
         </div>
-        <div class="preview-wrap" id="prev-stego-text"></div>
-      </div>
-
-      <div class="encrypt-toggle">
-        <label class="toggle-label">
-          <input type="checkbox" id="decrypt-text-toggle"/>
-          <span class="toggle-switch"></span>
-          Message was encrypted (need private key)
-        </label>
-        <div class="key-upload" id="privkey-upload" style="display:none">
-          <label>Private Key (.pem)</label>
-          <div class="drop-zone small" id="dz-privkey">
-            <span>Drop private.pem here</span>
-            <input type="file" accept=".pem" id="privkey-file" hidden/>
+        <div class="kslot" id="ks-priv">
+          <label class="flbl" style="margin-bottom:.42rem">Private Key <em>.pem</em></label>
+          <div class="dz sm" id="dz-priv" onclick="document.getElementById('fi-priv').click()">
+            <div class="dz-txt">Drop private.pem here</div>
+            <input type="file" id="fi-priv" accept=".pem" hidden/>
           </div>
         </div>
+        <div style="flex:1;min-height:.4rem"></div>
+        <button class="btn l" onclick="decodeText()"><span class="btn-shine"></span>Extract &amp; Reveal <span class="barr">→</span></button>
+        <div class="rzone" id="r-dt"></div>
       </div>
+    </div>
+  </div>
+  <div class="howstrip">
+    <div class="hwitem"><div class="hwnum">01</div><div class="hwbody"><strong>Upload</strong>Any PNG or JPG as your cover image</div></div>
+    <div class="hwitem"><div class="hwnum">02</div><div class="hwbody"><strong>Compose</strong>Type your message, optionally encrypt with RSA</div></div>
+    <div class="hwitem"><div class="hwnum">03</div><div class="hwbody"><strong>Download</strong>Stego image — visually identical to the original</div></div>
+    <div class="hwitem"><div class="hwnum">04</div><div class="hwbody"><strong>Reveal</strong>Extract the message anytime via the decode panel</div></div>
+  </div>
+</div>
 
-      <button class="btn btn-secondary" onclick="decodeText()">
-        <span class="btn-icon">🔓</span> Reveal Message
-      </button>
-      <div class="result-box" id="result-decode-text"></div>
-    </section>
-
-    <!-- ── HIDE IMAGE ─────────────────────────────────────────── -->
-    <section class="card" id="encode-image">
-      <div class="card-header">
-        <span class="card-icon">🖼️</span>
+<!-- IMAGE TAB -->
+<div class="panel" id="p-image">
+  <div class="panel-hero">
+    <div>
+      <div class="panel-hero-title">Image <span>Vault</span></div>
+      <div class="panel-hero-sub">4-bit LSB encoding — conceal one image inside another, imperceptible quality loss</div>
+    </div>
+    <div class="panel-hero-tag">4-BIT LSB ENCODING<br/>LOSSLESS PNG OUTPUT<br/>DIMENSION HEADER</div>
+  </div>
+  <div class="pgrid">
+    <div class="card">
+      <div class="cacc"></div>
+      <div class="chead">
+        <div class="chead-num">01</div>
         <div>
-          <h2>Hide Image Inside Image</h2>
-          <p>Conceal a secret image within a cover image</p>
+          <div class="cbadge m">◉ CONCEAL</div>
+          <h2>Hide Image in Image</h2>
+          <p>Embed a secret image inside a cover using 4-bit LSB — visually undetectable</p>
         </div>
       </div>
-      <div class="form-grid">
-        <div class="field">
-          <label>Cover Image</label>
-          <div class="drop-zone" id="dz-cover-img">
-            <span>Drop cover image</span>
-            <input type="file" accept="image/*" id="cover-img-file" hidden/>
+      <div class="cbody">
+        <div class="dualdrop">
+          <div>
+            <label class="flbl">Cover</label>
+            <div class="dz" id="dz-ci" onclick="document.getElementById('fi-ci').click()">
+              <div class="dz-icon">🖼</div>
+              <div class="dz-txt">Visible image</div>
+              <input type="file" id="fi-ci" accept="image/*" hidden/>
+            </div>
+            <div class="pwrap" id="pw-ci"></div>
           </div>
-          <div class="preview-wrap" id="prev-cover-img"></div>
-        </div>
-        <div class="field">
-          <label>Secret Image <span class="hint">to hide</span></label>
-          <div class="drop-zone" id="dz-secret-img">
-            <span>Drop secret image</span>
-            <input type="file" accept="image/*" id="secret-img-file" hidden/>
+          <div class="dualarr">→</div>
+          <div>
+            <label class="flbl">Secret</label>
+            <div class="dz" id="dz-si" onclick="document.getElementById('fi-si').click()">
+              <div class="dz-icon">🔒</div>
+              <div class="dz-txt">Hidden image</div>
+              <input type="file" id="fi-si" accept="image/*" hidden/>
+            </div>
+            <div class="pwrap" id="pw-si"></div>
           </div>
-          <div class="preview-wrap" id="prev-secret-img"></div>
         </div>
+        <button class="btn m" onclick="encodeImage()"><span class="btn-shine"></span>Hide Image <span class="barr">→</span></button>
+        <div class="rzone" id="r-ei"></div>
       </div>
-      <button class="btn btn-primary" onclick="encodeImage()">
-        <span class="btn-icon">🔒</span> Hide Image
-      </button>
-      <div class="result-box" id="result-encode-image"></div>
-    </section>
-
-    <!-- ── EXTRACT IMAGE ──────────────────────────────────────── -->
-    <section class="card" id="decode-image">
-      <div class="card-header">
-        <span class="card-icon">📷</span>
+    </div>
+    <div class="card alt">
+      <div class="cacc alt"></div>
+      <div class="chead">
+        <div class="chead-num alt">02</div>
         <div>
+          <div class="cbadge l">◈ EXTRACT</div>
           <h2>Extract Hidden Image</h2>
-          <p>Recover a secret image from a stego image</p>
+          <p>Recover the concealed image from any stego image — full fidelity restoration</p>
         </div>
       </div>
-      <div class="field">
-        <label>Stego Image</label>
-        <div class="drop-zone" id="dz-stego-img">
-          <span>Drop stego image</span>
-          <input type="file" accept="image/*" id="stego-img-file" hidden/>
-        </div>
-        <div class="preview-wrap" id="prev-stego-img"></div>
-      </div>
-      <button class="btn btn-secondary" onclick="decodeImage()">
-        <span class="btn-icon">🔓</span> Extract Image
-      </button>
-      <div class="result-box" id="result-decode-image"></div>
-    </section>
-
-    <!-- ── HIDE FILE ──────────────────────────────────────────── -->
-    <section class="card" id="encode-file">
-      <div class="card-header">
-        <span class="card-icon">📁</span>
+      <div class="cbody">
         <div>
-          <h2>Hide Any File in Image</h2>
-          <p>Conceal PDF, ZIP, DOCX or any file inside an image</p>
-        </div>
-      </div>
-      <div class="form-grid">
-        <div class="field">
-          <label>Cover Image</label>
-          <div class="drop-zone" id="dz-cover-file">
-            <span>Drop cover image</span>
-            <input type="file" accept="image/*" id="cover-file-img" hidden/>
+          <label class="flbl">Stego Image</label>
+          <div class="dz lg" id="dz-ximg" onclick="document.getElementById('fi-ximg').click()">
+            <div class="dz-icon">🔍</div>
+            <div class="dz-txt">Drop stego image here</div>
+            <div class="dz-hint">Image with hidden content</div>
+            <input type="file" id="fi-ximg" accept="image/*" hidden/>
           </div>
-          <div class="preview-wrap" id="prev-cover-file"></div>
+          <div class="pwrap" id="pw-ximg"></div>
         </div>
-        <div class="field">
-          <label>File to Hide <span class="hint">PDF, ZIP, DOCX, etc.</span></label>
-          <div class="drop-zone" id="dz-secret-file">
-            <span>Drop any file here</span>
-            <input type="file" id="secret-file-input" hidden/>
-          </div>
-          <div class="file-info" id="secret-file-info"></div>
-        </div>
+        <div class="ibox"><span class="ibox-ico">ℹ</span>Cover must be at least 4× the pixel count of the secret image for full recovery.</div>
+        <div style="flex:1;min-height:.4rem"></div>
+        <button class="btn l" onclick="decodeImage()"><span class="btn-shine"></span>Extract Image <span class="barr">→</span></button>
+        <div class="rzone" id="r-di"></div>
       </div>
-      <button class="btn btn-primary" onclick="encodeFile()">
-        <span class="btn-icon">🔒</span> Hide File
-      </button>
-      <div class="result-box" id="result-encode-file"></div>
-    </section>
+    </div>
+  </div>
+  <div class="howstrip">
+    <div class="hwitem"><div class="hwnum">01</div><div class="hwbody"><strong>4-bit LSB</strong>Stores upper 4 bits of each secret pixel</div></div>
+    <div class="hwitem"><div class="hwnum">02</div><div class="hwbody"><strong>Header</strong>Secret dimensions stored in first 64 pixels</div></div>
+    <div class="hwitem"><div class="hwnum">03</div><div class="hwbody"><strong>Quality</strong>Visual loss imperceptible to the human eye</div></div>
+    <div class="hwitem"><div class="hwnum">04</div><div class="hwbody"><strong>PNG Output</strong>Always lossless to prevent compression artifacts</div></div>
+  </div>
+</div>
 
-    <!-- ── EXTRACT FILE ───────────────────────────────────────── -->
-    <section class="card" id="decode-file">
-      <div class="card-header">
-        <span class="card-icon">📦</span>
+<!-- FILE TAB -->
+<div class="panel" id="p-file">
+  <div class="panel-hero">
+    <div>
+      <div class="panel-hero-title">File <span>Embed</span></div>
+      <div class="panel-hero-sub">2-bit LSB — conceal any file type inside a PNG, original filename preserved</div>
+    </div>
+    <div class="panel-hero-tag">2-BIT LSB PER CHANNEL<br/>FILENAME PRESERVED<br/>ANY FORMAT SUPPORTED</div>
+  </div>
+  <div class="pgrid">
+    <div class="card">
+      <div class="cacc"></div>
+      <div class="chead">
+        <div class="chead-num">01</div>
         <div>
+          <div class="cbadge m">◧ EMBED</div>
+          <h2>Hide Any File</h2>
+          <p>Conceal PDF, ZIP, DOCX or any format inside a PNG using 2-bit LSB</p>
+        </div>
+      </div>
+      <div class="cbody">
+        <div>
+          <label class="flbl">Cover Image <em>Larger = more capacity</em></label>
+          <div class="dz" id="dz-cf" onclick="document.getElementById('fi-cf').click()">
+            <div class="dz-icon">🖼</div>
+            <div class="dz-txt">Drop cover image here</div>
+            <div class="dz-hint">Larger image = more payload capacity</div>
+            <input type="file" id="fi-cf" accept="image/*" hidden/>
+          </div>
+          <div class="pwrap" id="pw-cf"></div>
+        </div>
+        <div>
+          <label class="flbl">File to Hide <em>PDF / ZIP / DOCX / any</em></label>
+          <div class="dz" id="dz-sf" onclick="document.getElementById('fi-sf').click()">
+            <div class="dz-icon">📎</div>
+            <div class="dz-txt">Drop any file here</div>
+            <div class="dz-hint">Original filename preserved</div>
+            <input type="file" id="fi-sf" hidden/>
+          </div>
+          <div class="chip" id="chip-sf"></div>
+        </div>
+        <button class="btn m" onclick="encodeFile()"><span class="btn-shine"></span>Embed File <span class="barr">→</span></button>
+        <div class="rzone" id="r-ef"></div>
+      </div>
+    </div>
+    <div class="card alt">
+      <div class="cacc alt"></div>
+      <div class="chead">
+        <div class="chead-num alt">02</div>
+        <div>
+          <div class="cbadge l">◈ RECOVER</div>
           <h2>Extract Hidden File</h2>
-          <p>Recover a hidden file from a stego image</p>
+          <p>Recover the original file — filename and type restored automatically, no guessing</p>
         </div>
       </div>
-      <div class="field">
-        <label>Stego Image</label>
-        <div class="drop-zone" id="dz-stego-file">
-          <span>Drop stego image</span>
-          <input type="file" accept="image/*" id="stego-file-img" hidden/>
-        </div>
-        <div class="preview-wrap" id="prev-stego-file"></div>
-      </div>
-      <button class="btn btn-secondary" onclick="decodeFile()">
-        <span class="btn-icon">🔓</span> Extract File
-      </button>
-      <div class="result-box" id="result-decode-file"></div>
-    </section>
-
-    <!-- ── ANALYZE ────────────────────────────────────────────── -->
-    <section class="card" id="analyze">
-      <div class="card-header">
-        <span class="card-icon">🧪</span>
+      <div class="cbody">
         <div>
-          <h2>Steganalysis</h2>
-          <p>Detect if an image contains hidden data using LSB analysis + Chi-Square test</p>
+          <label class="flbl">Stego Image</label>
+          <div class="dz lg" id="dz-xf" onclick="document.getElementById('fi-xf').click()">
+            <div class="dz-icon">📤</div>
+            <div class="dz-txt">Drop stego image here</div>
+            <div class="dz-hint">PNG with embedded file</div>
+            <input type="file" id="fi-xf" accept="image/*" hidden/>
+          </div>
+          <div class="pwrap" id="pw-xf"></div>
         </div>
+        <div class="ibox"><span class="ibox-ico">ℹ</span>Original filename and file type are recovered automatically — no format specification needed.</div>
+        <div style="flex:1;min-height:.4rem"></div>
+        <button class="btn l" onclick="decodeFile()"><span class="btn-shine"></span>Extract File <span class="barr">→</span></button>
+        <div class="rzone" id="r-df"></div>
       </div>
-      <div class="field">
-        <label>Image to Analyze</label>
-        <div class="drop-zone" id="dz-analyze">
-          <span>Drop image to analyze</span>
-          <input type="file" accept="image/*" id="analyze-file" hidden/>
-        </div>
-        <div class="preview-wrap" id="prev-analyze"></div>
-      </div>
-      <button class="btn btn-warning" onclick="analyzeImage()">
-        <span class="btn-icon">🔬</span> Run Analysis
-      </button>
-      <div class="result-box" id="result-analyze"></div>
-    </section>
+    </div>
+  </div>
+  <div class="howstrip">
+    <div class="hwitem"><div class="hwnum">01</div><div class="hwbody"><strong>2-bit LSB</strong>Per channel gives 6 bits/pixel for large files</div></div>
+    <div class="hwitem"><div class="hwnum">02</div><div class="hwbody"><strong>Header</strong>Filename + exact byte length stored</div></div>
+    <div class="hwitem"><div class="hwnum">03</div><div class="hwbody"><strong>Any Format</strong>PDF, ZIP, DOCX, MP3, executables</div></div>
+    <div class="hwitem"><div class="hwnum">04</div><div class="hwbody"><strong>Capacity</strong>pixels × 3 channels × 2 bits ÷ 8</div></div>
+  </div>
+</div>
 
-    <!-- ── KEY GENERATOR ──────────────────────────────────────── -->
-    <section class="card" id="keygen">
-      <div class="card-header">
-        <span class="card-icon">🗝️</span>
+<!-- KEYS TAB -->
+<div class="panel" id="p-keys">
+  <div class="panel-hero">
+    <div>
+      <div class="panel-hero-title">Key <span>Forge</span></div>
+      <div class="panel-hero-sub">Generate RSA-2048 key pairs for hybrid encryption — same standard as TLS 1.3</div>
+    </div>
+    <div class="panel-hero-tag">RSA-2048 OAEP<br/>AES-256-GCM<br/>PKCS#1 PEM FORMAT</div>
+  </div>
+  <div class="klayout">
+    <div class="kpanel">
+      <div class="ktitle">RSA <span>Key Forge</span></div>
+      <p class="kdesc">Generate a 2048-bit RSA key pair for hybrid encryption. Messages are protected by RSA key exchange combined with AES-256-GCM authenticated encryption — same standard as TLS 1.3.</p>
+      <div class="kflow">
+        <div class="kstep">
+          <div class="kstep-badge m">AES</div>
+          <div class="kstep-lbl">Random 256-bit session key encrypts your message with GCM authentication</div>
+        </div>
+        <div class="kstep-arrow">↓</div>
+        <div class="kstep">
+          <div class="kstep-badge v">RSA</div>
+          <div class="kstep-lbl">Public key wraps the AES session key using OAEP padding</div>
+        </div>
+        <div class="kstep-arrow">↓</div>
+        <div class="kstep">
+          <div class="kstep-badge l">LSB</div>
+          <div class="kstep-lbl">Encrypted bundle hidden invisibly inside image pixel data</div>
+        </div>
+      </div>
+      <div class="krule"><span>🔑</span><div><strong>Public Key</strong> — Share with anyone who needs to send you encrypted messages</div></div>
+      <div class="krule"><span>🔒</span><div><strong>Private Key</strong> — Keep this secret. Required to decrypt all received messages</div></div>
+    </div>
+
+    <div class="card">
+      <div class="cacc"></div>
+      <div class="chead">
+        <div class="chead-num">⬡</div>
         <div>
-          <h2>Generate RSA Key Pair</h2>
-          <p>Create a 2048-bit RSA public/private key pair for encryption</p>
+          <div class="cbadge m">⬡ GENERATE</div>
+          <h2>Create Key Pair</h2>
+          <p>RSA-2048 with OAEP padding — cryptographically secure key generation</p>
         </div>
       </div>
-      <div class="keygen-info">
-        <div class="info-item">🔑 <strong>Public key</strong> — share this with anyone who wants to send you a message</div>
-        <div class="info-item">🔒 <strong>Private key</strong> — keep this secret, use it to decrypt received messages</div>
+      <div class="cbody">
+        <div class="kspecs">
+          <div class="kspec"><div class="kspec-k">Algorithm</div><div class="kspec-v">RSA-2048 OAEP</div></div>
+          <div class="kspec"><div class="kspec-k">Symmetric</div><div class="kspec-v">AES-256-GCM</div></div>
+          <div class="kspec"><div class="kspec-k">Key Size</div><div class="kspec-v">2048 bits</div></div>
+          <div class="kspec"><div class="kspec-k">Format</div><div class="kspec-v">PEM PKCS#1</div></div>
+        </div>
+        <button class="btn m lg" onclick="generateKeys()"><span class="btn-shine"></span>⬡ Forge Key Pair <span class="barr">→</span></button>
+        <div class="rzone" id="r-kg"></div>
       </div>
-      <button class="btn btn-accent" onclick="generateKeys()">
-        <span class="btn-icon">⚡</span> Generate Key Pair
-      </button>
-      <div class="result-box" id="result-keygen"></div>
-    </section>
+    </div>
+  </div>
+</div>
 
-  </main>
+</main>
 
-  <footer>
-    <p>StegoTool — LSB Steganography with RSA+AES-256-GCM Encryption</p>
-    <p class="footer-sub">All processing happens locally on your machine. Nothing is uploaded to any server.</p>
-  </footer>
+<footer>
+  <div><strong>StegoTool</strong> &nbsp;·&nbsp; LSB Steganography Suite</div>
+  <div class="fmid">All processing is local — no data ever leaves your machine</div>
+  <div>Python · Flask · Pillow · pycryptodome</div>
+</footer>
 
-  <script src="/static/app.js"></script>
+<script>
+// ── Boot ──────────────────────────────────────────────────
+const msgs=['INITIALIZING SECURE CHANNEL...','LOADING CRYPTO MODULES...','ESTABLISHING LSB ENCODER...','VERIFYING RSA FRAMEWORK...','ALL SYSTEMS OPERATIONAL.'];
+let mi=0,pct=0;
+const bb=document.getElementById('bb'),bm=document.getElementById('bm'),boot=document.getElementById('boot');
+const bi=setInterval(()=>{
+  pct+=1.6; bb.style.width=pct+'%';
+  if(pct%20<1.6&&mi<msgs.length) bm.textContent=msgs[mi++];
+  if(pct>=100){clearInterval(bi);setTimeout(()=>boot.classList.add('off'),500);}
+},25);
+
+// ── Clock ─────────────────────────────────────────────────
+function tick(){const n=new Date();document.getElementById('clock').textContent=[n.getHours(),n.getMinutes(),n.getSeconds()].map(x=>String(x).padStart(2,'0')).join(':');}
+tick();setInterval(tick,1000);
+
+// ── Tabs ──────────────────────────────────────────────────
+function go(t){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id==='p-'+t));
+}
+
+// ── Drop Zones ────────────────────────────────────────────
+function dz(dzId,inId,pwId,chipId){
+  const d=document.getElementById(dzId),inp=document.getElementById(inId);
+  if(!d||!inp)return;
+  d.addEventListener('dragover',e=>{e.preventDefault();d.classList.add('over');});
+  d.addEventListener('dragleave',()=>d.classList.remove('over'));
+  d.addEventListener('drop',e=>{e.preventDefault();d.classList.remove('over');if(e.dataTransfer.files[0]){inp.files=e.dataTransfer.files;onf(inp,d,pwId,chipId);}});
+  inp.addEventListener('change',()=>onf(inp,d,pwId,chipId));
+}
+function onf(inp,d,pwId,chipId){
+  const f=inp.files[0];if(!f)return;
+  d.classList.add('got');
+  const txt=d.querySelector('.dz-txt');if(txt)txt.textContent='✓ '+f.name;
+  if(chipId){const ch=document.getElementById(chipId);if(ch){ch.textContent=f.name+' — '+fmt(f.size);ch.classList.add('show');}}
+  if(pwId&&f.type.startsWith('image/')){const w=document.getElementById(pwId);if(w){w.innerHTML='';const i=document.createElement('img');i.src=URL.createObjectURL(f);w.appendChild(i);}}
+}
+function fmt(b){return b<1024?b+' B':b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(2)+' MB';}
+
+dz('dz-ct','fi-ct','pw-ct');
+dz('dz-dt','fi-dt','pw-dt');
+dz('dz-pub','fi-pub',null);
+dz('dz-priv','fi-priv',null);
+dz('dz-ci','fi-ci','pw-ci');
+dz('dz-si','fi-si','pw-si');
+dz('dz-ximg','fi-ximg','pw-ximg');
+dz('dz-cf','fi-cf','pw-cf');
+dz('dz-sf','fi-sf',null,'chip-sf');
+dz('dz-xf','fi-xf','pw-xf');
+
+document.getElementById('et-msg').addEventListener('input',function(){document.getElementById('cc').textContent=this.value.length;});
+document.getElementById('et-enc').addEventListener('change',function(){document.getElementById('ks-pub').classList.toggle('open',this.checked);});
+document.getElementById('dt-dec').addEventListener('change',function(){document.getElementById('ks-priv').classList.toggle('open',this.checked);});
+
+// ── API ───────────────────────────────────────────────────
+async function api(url,fd){const r=await fetch(url,{method:'POST',body:fd});return r.json();}
+function busy(btn){const o=btn.innerHTML;btn.disabled=true;btn.innerHTML='<span class="spin"></span>&nbsp; Processing...';return o;}
+function idle(btn,o){btn.disabled=false;btn.innerHTML=o;}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function showOk(id,rows,dl,alt){
+  let h=`<div class="rok"><div class="rtitle ${alt?'l':'m'}">✦ Operation Complete</div>`;
+  rows.forEach(([l,v])=>h+=`<div class="rrow"><span class="rl">${l}</span><span class="rv">${v}</span></div>`);
+  if(dl)h+=`<a class="dlbtn${alt?' l':''}" href="/download/${encodeURIComponent(dl)}" download>↓ Download Result</a>`;
+  document.getElementById(id).innerHTML=h+'</div>';
+}
+function showErr(id,m){document.getElementById(id).innerHTML=`<div class="rerr">✕ ${esc(m)}</div>`;}
+
+async function encodeText(){
+  const btn=document.querySelector('#c-et .btn');const o=busy(btn);
+  try{
+    const cover=document.getElementById('fi-ct').files[0];
+    const msg=document.getElementById('et-msg').value.trim();
+    const enc=document.getElementById('et-enc').checked;
+    const pub=document.getElementById('fi-pub').files[0];
+    if(!cover)return showErr('r-et','Select a cover image first.');
+    if(!msg)return showErr('r-et','Enter a message to hide.');
+    if(enc&&!pub)return showErr('r-et','Upload your public key (.pem) for encryption.');
+    const fd=new FormData();fd.append('cover',cover);fd.append('message',msg);fd.append('encrypt',enc?'true':'false');if(pub)fd.append('pubkey',pub);
+    const d=await api('/api/encode-text',fd);
+    if(d.error)return showErr('r-et',d.error);
+    showOk('r-et',[['Capacity Used',d.usage_pct+'%'],['Encrypted',d.encrypted?'RSA+AES-256-GCM ✓':'None'],['Output File',d.file]],d.file);
+  }catch(e){showErr('r-et',e.message);}finally{idle(btn,o);}
+}
+
+async function decodeText(){
+  const btn=document.querySelector('#c-dt .btn');const o=busy(btn);
+  try{
+    const stego=document.getElementById('fi-dt').files[0];
+    const dec=document.getElementById('dt-dec').checked;
+    const priv=document.getElementById('fi-priv').files[0];
+    if(!stego)return showErr('r-dt','Select the stego image.');
+    if(dec&&!priv)return showErr('r-dt','Upload your private key (.pem).');
+    const fd=new FormData();fd.append('stego',stego);fd.append('decrypt',dec?'true':'false');if(priv)fd.append('privkey',priv);
+    const d=await api('/api/decode-text',fd);
+    if(d.error)return showErr('r-dt',d.error);
+    document.getElementById('r-dt').innerHTML=`<div class="rok"><div class="rtitle l">✦ Message Revealed</div><div class="rrow"><span class="rl">Encrypted</span><span class="rv">${d.encrypted?'Yes — decrypted ✓':'No'}</span></div><div class="msgbox">${esc(d.message)}</div></div>`;
+  }catch(e){showErr('r-dt',e.message);}finally{idle(btn,o);}
+}
+
+async function encodeImage(){
+  const btn=document.querySelector('#p-image .btn.m');const o=busy(btn);
+  try{
+    const c=document.getElementById('fi-ci').files[0],s=document.getElementById('fi-si').files[0];
+    if(!c)return showErr('r-ei','Select a cover image.');
+    if(!s)return showErr('r-ei','Select the secret image to hide.');
+    const fd=new FormData();fd.append('cover',c);fd.append('secret',s);
+    const d=await api('/api/encode-image',fd);
+    if(d.error)return showErr('r-ei',d.error);
+    showOk('r-ei',[['Cover Size',d.cover_size],['Secret Size',d.secret_size],['Output',d.file]],d.file);
+  }catch(e){showErr('r-ei',e.message);}finally{idle(btn,o);}
+}
+
+async function decodeImage(){
+  const btn=document.querySelector('#p-image .btn.l');const o=busy(btn);
+  try{
+    const s=document.getElementById('fi-ximg').files[0];
+    if(!s)return showErr('r-di','Select the stego image.');
+    const fd=new FormData();fd.append('stego',s);
+    const d=await api('/api/decode-image',fd);
+    if(d.error)return showErr('r-di',d.error);
+    showOk('r-di',[['Extracted Size',d.secret_size],['Output',d.file]],d.file,true);
+  }catch(e){showErr('r-di',e.message);}finally{idle(btn,o);}
+}
+
+async function encodeFile(){
+  const btn=document.querySelector('#p-file .btn.m');const o=busy(btn);
+  try{
+    const c=document.getElementById('fi-cf').files[0],s=document.getElementById('fi-sf').files[0];
+    if(!c)return showErr('r-ef','Select a cover image.');
+    if(!s)return showErr('r-ef','Select the file to hide.');
+    const fd=new FormData();fd.append('cover',c);fd.append('secret',s);
+    const d=await api('/api/encode-file',fd);
+    if(d.error)return showErr('r-ef',d.error);
+    showOk('r-ef',[['Hidden File',d.filename],['File Size',fmt(d.file_size)],['Capacity Used',d.usage_pct+'%'],['Output',d.file]],d.file);
+  }catch(e){showErr('r-ef',e.message);}finally{idle(btn,o);}
+}
+
+async function decodeFile(){
+  const btn=document.querySelector('#p-file .btn.l');const o=busy(btn);
+  try{
+    const s=document.getElementById('fi-xf').files[0];
+    if(!s)return showErr('r-df','Select the stego image.');
+    const fd=new FormData();fd.append('stego',s);
+    const d=await api('/api/decode-file',fd);
+    if(d.error)return showErr('r-df',d.error);
+    showOk('r-df',[['Filename',d.filename],['File Size',fmt(d.file_size)]],d.file,true);
+  }catch(e){showErr('r-df',e.message);}finally{idle(btn,o);}
+}
+
+async function generateKeys(){
+  const btn=document.querySelector('#p-keys .btn');const o=busy(btn);
+  try{
+    const d=await api('/api/keygen',new FormData());
+    if(d.error)return showErr('r-kg',d.error);
+    document.getElementById('r-kg').innerHTML=`
+      <div class="rok">
+        <div class="rtitle m">✦ Key Pair Forged</div>
+        <div class="rrow"><span class="rl">Algorithm</span><span class="rv">RSA-2048 + AES-256-GCM</span></div>
+        <div style="margin-top:1rem">
+          <div style="font-family:var(--FM);font-size:.52rem;letter-spacing:.12em;color:var(--mag);margin-bottom:.35rem;text-transform:uppercase">◈ Public Key — Share This</div>
+          <div class="pembox">${esc(d.public_pem)}</div>
+          <a class="dlbtn" href="/download/${encodeURIComponent(d.public_key)}" download style="margin-top:.5rem">↓ public.pem</a>
+        </div>
+        <div style="margin-top:1rem">
+          <div style="font-family:var(--FM);font-size:.52rem;letter-spacing:.12em;color:var(--lime);margin-bottom:.35rem;text-transform:uppercase">◧ Private Key — Keep Secret</div>
+          <div class="pembox">${esc(d.private_pem)}</div>
+          <a class="dlbtn l" href="/download/${encodeURIComponent(d.private_key)}" download style="margin-top:.5rem">↓ private.pem</a>
+        </div>
+      </div>`;
+  }catch(e){showErr('r-kg',e.message);}finally{idle(btn,o);}
+}
+</script>
 </body>
 </html>

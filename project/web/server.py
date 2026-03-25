@@ -9,7 +9,6 @@ Routes:
   POST /api/decode-image     → extract hidden image
   POST /api/encode-file      → hide any file in image
   POST /api/decode-file      → extract hidden file
-  POST /api/analyze          → steganalysis
   POST /api/keygen           → generate RSA key pair
 """
 
@@ -24,7 +23,7 @@ from flask import Flask, request, jsonify, send_file, render_template, send_from
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 
-from stego import lsb_text, lsb_image, lsb_file, steganalysis
+from stego import lsb_text, lsb_image, lsb_file
 from stego.crypto import generate_keypair, save_keypair
 
 # ── App setup ──────────────────────────────────────────────────────────────
@@ -163,15 +162,6 @@ def api_decode_file():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-
-@app.route("/api/analyze", methods=["POST"])
-def api_analyze():
-    try:
-        image  = save_upload(request.files["image"], ALLOWED_IMAGE)
-        result = steganalysis.analyze(image)
-        return jsonify({"success": True, **result})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
 
 
 @app.route("/api/keygen", methods=["POST"])

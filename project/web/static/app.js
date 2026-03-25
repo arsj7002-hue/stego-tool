@@ -1,451 +1,395 @@
-/* app.js — StegoTool Frontend Logic */
+/* app.js — StegoTool Frontend */
 
-const API = '';   // same origin (Flask serves both)
+const API = '';
 
-// ── Pixel grid animation ────────────────────────────────────────────────
-(function initPixelGrid() {
-  const grid = document.getElementById('pixelGrid');
-  if (!grid) return;
-  const count = 20 * 20;
-  const colors = ['#0a0c10','#0f1218','#161b24','#00d4ff','#7c3aed','#00ff88'];
-  for (let i = 0; i < count; i++) {
-    const px = document.createElement('div');
-    px.className = 'px';
-    grid.appendChild(px);
+// ── Boot Sequence ──────────────────────────────────────────────────────────
+const bootMessages = [
+  'INITIALIZING SECURE CHANNEL...',
+  'LOADING CRYPTOGRAPHIC MODULES...',
+  'ESTABLISHING LSB ENCODER...',
+  'VERIFYING RSA KEY FRAMEWORK...',
+  'ALL SYSTEMS OPERATIONAL.',
+];
+let bootIdx = 0;
+const bootFill = document.getElementById('bootFill');
+const bootText = document.getElementById('bootText');
+const bootOverlay = document.getElementById('bootOverlay');
+
+function runBoot() {
+  let pct = 0;
+  const interval = setInterval(() => {
+    pct += 2;
+    bootFill.style.width = pct + '%';
+    if (pct % 20 === 0 && bootIdx < bootMessages.length) {
+      bootText.textContent = bootMessages[bootIdx++];
+    }
+    if (pct >= 100) {
+      clearInterval(interval);
+      setTimeout(() => bootOverlay.classList.add('hidden'), 300);
+    }
+  }, 25);
+}
+runBoot();
+
+// ── Clock ──────────────────────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    String(now.getHours()).padStart(2,'0') + ':' +
+    String(now.getMinutes()).padStart(2,'0') + ':' +
+    String(now.getSeconds()).padStart(2,'0');
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ── Particle Canvas ────────────────────────────────────────────────────────
+(function initParticles() {
+  const canvas = document.getElementById('particles');
+  const ctx    = canvas.getContext('2d');
+  let W, H, particles = [];
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
   }
-  const pxEls = grid.querySelectorAll('.px');
-  function flicker() {
-    const idx = Math.floor(Math.random() * count);
-    const col = colors[Math.floor(Math.random() * colors.length)];
-    pxEls[idx].style.background = col;
-    setTimeout(flicker, Math.random() * 80 + 20);
+  window.addEventListener('resize', resize);
+  resize();
+
+  function Particle() {
+    this.x    = Math.random() * W;
+    this.y    = Math.random() * H;
+    this.vx   = (Math.random() - 0.5) * 0.3;
+    this.vy   = (Math.random() - 0.5) * 0.3;
+    this.size = Math.random() * 1.5 + 0.5;
+    this.alpha= Math.random() * 0.5 + 0.1;
+    this.color= Math.random() > 0.7 ? '#f0b429' : '#00e5cc';
   }
-  flicker();
+  Particle.prototype.update = function() {
+    this.x += this.vx; this.y += this.vy;
+    if (this.x < 0) this.x = W;
+    if (this.x > W) this.x = 0;
+    if (this.y < 0) this.y = H;
+    if (this.y > H) this.y = 0;
+  };
+
+  for (let i = 0; i < 80; i++) particles.push(new Particle());
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    // Draw connections
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i+1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 100) {
+          ctx.beginPath();
+          ctx.strokeStyle = `rgba(0,229,204,${0.04 * (1 - dist/100)})`;
+          ctx.lineWidth = 0.5;
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+    // Draw dots
+    particles.forEach(p => {
+      p.update();
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = p.alpha;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
 })();
 
-// ── Drop zone setup ─────────────────────────────────────────────────────
-function setupDropZone(dzId, inputId, previewId, opts = {}) {
+// ── Tab Switching ──────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === name);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => {
+    p.classList.toggle('active', p.id === 'tab-' + name);
+  });
+}
+
+// ── Drop Zones ────────────────────────────────────────────────────────────
+function setupDZ(dzId, inputId, previewId, opts = {}) {
   const dz    = document.getElementById(dzId);
   const input = document.getElementById(inputId);
   if (!dz || !input) return;
 
-  dz.addEventListener('click', () => input.click());
-
-  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('drag-over'); });
   dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
   dz.addEventListener('drop', e => {
-    e.preventDefault();
-    dz.classList.remove('drag-over');
-    if (e.dataTransfer.files.length) {
-      input.files = e.dataTransfer.files;
-      handleFileSelected(input, dz, previewId, opts);
-    }
+    e.preventDefault(); dz.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) { input.files = e.dataTransfer.files; onFile(input, dz, previewId, opts); }
   });
-
-  input.addEventListener('change', () => handleFileSelected(input, dz, previewId, opts));
+  input.addEventListener('change', () => onFile(input, dz, previewId, opts));
 }
 
-function handleFileSelected(input, dz, previewId, opts) {
+function onFile(input, dz, previewId, opts) {
   const file = input.files[0];
   if (!file) return;
   dz.classList.add('has-file');
-  dz.querySelector('span').textContent = '✓ ' + file.name;
+  dz.querySelector('.dz-text').textContent = '✓ ' + file.name;
 
-  // Show info for non-image files
-  if (opts.infoId) {
-    const info = document.getElementById(opts.infoId);
-    if (info) info.textContent = `${file.name} — ${formatBytes(file.size)}`;
+  if (opts.chipId) {
+    const chip = document.getElementById(opts.chipId);
+    if (chip) { chip.textContent = file.name + ' — ' + fmtBytes(file.size); chip.classList.add('visible'); }
   }
-
-  // Image preview
   if (previewId && file.type.startsWith('image/')) {
     const wrap = document.getElementById(previewId);
-    if (wrap) {
-      wrap.innerHTML = '';
-      const img = document.createElement('img');
-      img.src = URL.createObjectURL(file);
-      wrap.appendChild(img);
-    }
+    if (wrap) { wrap.innerHTML = ''; const img = document.createElement('img'); img.src = URL.createObjectURL(file); wrap.appendChild(img); }
   }
 }
 
-function formatBytes(b) {
+function fmtBytes(b) {
   if (b < 1024) return b + ' B';
-  if (b < 1024*1024) return (b/1024).toFixed(1) + ' KB';
-  return (b/1024/1024).toFixed(2) + ' MB';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(2) + ' MB';
 }
 
-// ── Init all drop zones ─────────────────────────────────────────────────
-setupDropZone('dz-cover-text',  'cover-text-file',   'prev-cover-text');
-setupDropZone('dz-stego-text',  'stego-text-file',   'prev-stego-text');
-setupDropZone('dz-pubkey',      'pubkey-file',        null);
-setupDropZone('dz-privkey',     'privkey-file',       null);
-setupDropZone('dz-cover-img',   'cover-img-file',    'prev-cover-img');
-setupDropZone('dz-secret-img',  'secret-img-file',   'prev-secret-img');
-setupDropZone('dz-stego-img',   'stego-img-file',    'prev-stego-img');
-setupDropZone('dz-cover-file',  'cover-file-img',    'prev-cover-file');
-setupDropZone('dz-secret-file', 'secret-file-input', null, { infoId: 'secret-file-info' });
-setupDropZone('dz-stego-file',  'stego-file-img',    'prev-stego-file');
-setupDropZone('dz-analyze',     'analyze-file',      'prev-analyze');
+// Init all drop zones
+setupDZ('dz-cover-text',  'cover-text-file',   'prev-cover-text');
+setupDZ('dz-stego-text',  'stego-text-file',   'prev-stego-text');
+setupDZ('dz-pubkey',      'pubkey-file',        null);
+setupDZ('dz-privkey',     'privkey-file',       null);
+setupDZ('dz-cover-img',   'cover-img-file',    'prev-cover-img');
+setupDZ('dz-secret-img',  'secret-img-file',   'prev-secret-img');
+setupDZ('dz-stego-img',   'stego-img-file',    'prev-stego-img');
+setupDZ('dz-cover-file',  'cover-file-img',    'prev-cover-file');
+setupDZ('dz-secret-file', 'secret-file-input', null, { chipId: 'secret-file-info' });
+setupDZ('dz-stego-file',  'stego-file-img',    'prev-stego-file');
 
-// ── Toggle encryption panels ────────────────────────────────────────────
-document.getElementById('encrypt-text-toggle').addEventListener('change', function () {
-  document.getElementById('pubkey-upload').style.display = this.checked ? 'block' : 'none';
-});
-document.getElementById('decrypt-text-toggle').addEventListener('change', function () {
-  document.getElementById('privkey-upload').style.display = this.checked ? 'block' : 'none';
+// ── Char counter ──────────────────────────────────────────────────────────
+document.getElementById('encode-text-msg').addEventListener('input', function() {
+  document.getElementById('char-count').textContent = this.value.length;
 });
 
-// ── Helpers ─────────────────────────────────────────────────────────────
-function setLoading(resultId, btnEl) {
-  document.getElementById(resultId).innerHTML = '';
-  if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '<span class="spinner"></span> Working...'; }
-}
+// ── Encryption toggles ────────────────────────────────────────────────────
+document.getElementById('encrypt-text-toggle').addEventListener('change', function() {
+  const s = document.getElementById('pubkey-section');
+  s.classList.toggle('open', this.checked);
+});
+document.getElementById('decrypt-text-toggle').addEventListener('change', function() {
+  const s = document.getElementById('privkey-section');
+  s.classList.toggle('open', this.checked);
+});
 
-function resetBtn(btnEl, originalHTML) {
-  if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = originalHTML; }
-}
-
-function showSuccess(resultId, rows, downloadFile = null) {
-  let html = `<div class="result-success">
-    <div class="result-title ok">✅ Success</div>`;
-  for (const [label, value] of rows) {
-    html += `<div class="result-row">
-      <span class="result-label">${label}</span>
-      <span class="result-value">${value}</span>
-    </div>`;
-  }
-  if (downloadFile) {
-    html += `<a class="download-btn" href="/download/${encodeURIComponent(downloadFile)}" download>
-      ⬇ Download Result</a>`;
-  }
-  html += `</div>`;
-  document.getElementById(resultId).innerHTML = html;
-}
-
-function showError(resultId, msg) {
-  document.getElementById(resultId).innerHTML = `
-    <div class="result-error">
-      <div class="result-title err">❌ Error</div>
-      ${msg}
-    </div>`;
-}
-
-async function postForm(url, formData) {
-  const res  = await fetch(API + url, { method: 'POST', body: formData });
+// ── API helpers ────────────────────────────────────────────────────────────
+async function post(url, fd) {
+  const res = await fetch(API + url, { method: 'POST', body: fd });
   return res.json();
 }
 
-// ── ENCODE TEXT ─────────────────────────────────────────────────────────
-async function encodeText() {
-  const btn = document.querySelector('#encode-text .btn');
-  const orig = btn.innerHTML;
-  setLoading('result-encode-text', btn);
+function loading(btnEl) {
+  const orig = btnEl.innerHTML;
+  btnEl.disabled = true;
+  btnEl.innerHTML = `<span class="spinner"></span><span>PROCESSING...</span>`;
+  return orig;
+}
+function restore(btnEl, orig) { btnEl.disabled = false; btnEl.innerHTML = orig; }
 
+function ok(zoneId, rows, dlFile, isGold) {
+  const color = isGold ? 'gold' : 'teal';
+  let h = `<div class="result-ok"><div class="result-title ${color}">◆ OPERATION COMPLETE</div>`;
+  rows.forEach(([l, v]) => h += `<div class="result-row"><span class="rl">${l}</span><span class="rv">${v}</span></div>`);
+  if (dlFile) h += `<a class="dl-btn" href="/download/${encodeURIComponent(dlFile)}" download>⬇ DOWNLOAD RESULT</a>`;
+  h += `</div>`;
+  document.getElementById(zoneId).innerHTML = h;
+}
+
+function err(zoneId, msg) {
+  document.getElementById(zoneId).innerHTML =
+    `<div class="result-err"><div class="result-title err">✕ ERROR</div>${esc(msg)}</div>`;
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── ENCODE TEXT ────────────────────────────────────────────────────────────
+async function encodeText() {
+  const btn  = document.querySelector('#card-encode-text .op-btn');
+  const orig = loading(btn);
   try {
     const cover   = document.getElementById('cover-text-file').files[0];
     const message = document.getElementById('encode-text-msg').value.trim();
     const encrypt = document.getElementById('encrypt-text-toggle').checked;
     const pubkey  = document.getElementById('pubkey-file').files[0];
 
-    if (!cover)   return showError('result-encode-text', 'Please select a cover image.');
-    if (!message) return showError('result-encode-text', 'Please enter a message.');
-    if (encrypt && !pubkey) return showError('result-encode-text', 'Please upload your public key.');
+    if (!cover)   return err('result-encode-text', 'Select a cover image first.');
+    if (!message) return err('result-encode-text', 'Enter a message to hide.');
+    if (encrypt && !pubkey) return err('result-encode-text', 'Upload your public key for encryption.');
 
     const fd = new FormData();
-    fd.append('cover', cover);
-    fd.append('message', message);
+    fd.append('cover', cover); fd.append('message', message);
     fd.append('encrypt', encrypt ? 'true' : 'false');
     if (pubkey) fd.append('pubkey', pubkey);
 
-    const data = await postForm('/api/encode-text', fd);
-    if (data.error) return showError('result-encode-text', data.error);
+    const d = await post('/api/encode-text', fd);
+    if (d.error) return err('result-encode-text', d.error);
 
-    showSuccess('result-encode-text', [
-      ['Capacity used', data.usage_pct + '%'],
-      ['Encrypted',     data.encrypted ? 'Yes (RSA+AES-256-GCM)' : 'No'],
-      ['Output file',   data.file],
-    ], data.file);
-  } catch (e) {
-    showError('result-encode-text', e.message);
-  } finally {
-    resetBtn(btn, orig);
-  }
+    ok('result-encode-text', [
+      ['CAPACITY USED', d.usage_pct + '%'],
+      ['ENCRYPTED',     d.encrypted ? 'RSA+AES-256-GCM ✓' : 'None (plaintext)'],
+      ['OUTPUT FILE',   d.file],
+    ], d.file);
+  } catch(e) { err('result-encode-text', e.message); }
+  finally    { restore(btn, orig); }
 }
 
-// ── DECODE TEXT ─────────────────────────────────────────────────────────
+// ── DECODE TEXT ────────────────────────────────────────────────────────────
 async function decodeText() {
-  const btn = document.querySelector('#decode-text .btn');
-  const orig = btn.innerHTML;
-  setLoading('result-decode-text', btn);
-
+  const btn  = document.querySelector('#card-decode-text .op-btn');
+  const orig = loading(btn);
   try {
     const stego   = document.getElementById('stego-text-file').files[0];
     const decrypt = document.getElementById('decrypt-text-toggle').checked;
     const privkey = document.getElementById('privkey-file').files[0];
 
-    if (!stego) return showError('result-decode-text', 'Please select a stego image.');
-    if (decrypt && !privkey) return showError('result-decode-text', 'Please upload your private key.');
+    if (!stego) return err('result-decode-text', 'Select the stego image.');
+    if (decrypt && !privkey) return err('result-decode-text', 'Upload your private key.');
 
     const fd = new FormData();
     fd.append('stego', stego);
     fd.append('decrypt', decrypt ? 'true' : 'false');
     if (privkey) fd.append('privkey', privkey);
 
-    const data = await postForm('/api/decode-text', fd);
-    if (data.error) return showError('result-decode-text', data.error);
+    const d = await post('/api/decode-text', fd);
+    if (d.error) return err('result-decode-text', d.error);
 
-    showSuccess('result-decode-text', [
-      ['Message',   `<strong style="color:#00ff88">${escapeHtml(data.message)}</strong>`],
-      ['Encrypted', data.encrypted ? 'Yes — decrypted successfully' : 'No'],
-    ]);
-  } catch (e) {
-    showError('result-decode-text', e.message);
-  } finally {
-    resetBtn(btn, orig);
-  }
+    document.getElementById('result-decode-text').innerHTML = `
+      <div class="result-ok">
+        <div class="result-title gold">◆ MESSAGE REVEALED</div>
+        <div class="result-row"><span class="rl">ENCRYPTED</span><span class="rv">${d.encrypted ? 'Yes — decrypted ✓' : 'No'}</span></div>
+        <div class="msg-reveal">${esc(d.message)}</div>
+      </div>`;
+  } catch(e) { err('result-decode-text', e.message); }
+  finally    { restore(btn, orig); }
 }
 
-// ── ENCODE IMAGE ─────────────────────────────────────────────────────────
+// ── ENCODE IMAGE ───────────────────────────────────────────────────────────
 async function encodeImage() {
-  const btn = document.querySelector('#encode-image .btn');
-  const orig = btn.innerHTML;
-  setLoading('result-encode-image', btn);
-
+  const btn  = document.querySelector('#tab-image .op-btn.teal');
+  const orig = loading(btn);
   try {
     const cover  = document.getElementById('cover-img-file').files[0];
     const secret = document.getElementById('secret-img-file').files[0];
-    if (!cover)  return showError('result-encode-image', 'Please select a cover image.');
-    if (!secret) return showError('result-encode-image', 'Please select a secret image.');
+    if (!cover)  return err('result-encode-image', 'Select a cover image.');
+    if (!secret) return err('result-encode-image', 'Select the secret image to hide.');
 
     const fd = new FormData();
     fd.append('cover', cover); fd.append('secret', secret);
+    const d = await post('/api/encode-image', fd);
+    if (d.error) return err('result-encode-image', d.error);
 
-    const data = await postForm('/api/encode-image', fd);
-    if (data.error) return showError('result-encode-image', data.error);
-
-    showSuccess('result-encode-image', [
-      ['Cover size',  data.cover_size],
-      ['Secret size', data.secret_size],
-      ['Output file', data.file],
-    ], data.file);
-  } catch (e) {
-    showError('result-encode-image', e.message);
-  } finally {
-    resetBtn(btn, orig);
-  }
+    ok('result-encode-image', [
+      ['COVER SIZE',  d.cover_size],
+      ['SECRET SIZE', d.secret_size],
+      ['OUTPUT',      d.file],
+    ], d.file);
+  } catch(e) { err('result-encode-image', e.message); }
+  finally    { restore(btn, orig); }
 }
 
-// ── DECODE IMAGE ──────────────────────────────────────────────────────────
+// ── DECODE IMAGE ───────────────────────────────────────────────────────────
 async function decodeImage() {
-  const btn = document.querySelector('#decode-image .btn');
-  const orig = btn.innerHTML;
-  setLoading('result-decode-image', btn);
-
+  const btn  = document.querySelector('#tab-image .op-btn.gold');
+  const orig = loading(btn);
   try {
     const stego = document.getElementById('stego-img-file').files[0];
-    if (!stego) return showError('result-decode-image', 'Please select a stego image.');
+    if (!stego) return err('result-decode-image', 'Select the stego image.');
 
     const fd = new FormData();
     fd.append('stego', stego);
+    const d = await post('/api/decode-image', fd);
+    if (d.error) return err('result-decode-image', d.error);
 
-    const data = await postForm('/api/decode-image', fd);
-    if (data.error) return showError('result-decode-image', data.error);
-
-    showSuccess('result-decode-image', [
-      ['Secret size', data.secret_size],
-      ['Output file', data.file],
-    ], data.file);
-  } catch (e) {
-    showError('result-decode-image', e.message);
-  } finally {
-    resetBtn(btn, orig);
-  }
+    ok('result-decode-image', [
+      ['EXTRACTED SIZE', d.secret_size],
+      ['OUTPUT',         d.file],
+    ], d.file, true);
+  } catch(e) { err('result-decode-image', e.message); }
+  finally    { restore(btn, orig); }
 }
 
-// ── ENCODE FILE ───────────────────────────────────────────────────────────
+// ── ENCODE FILE ────────────────────────────────────────────────────────────
 async function encodeFile() {
-  const btn = document.querySelector('#encode-file .btn');
-  const orig = btn.innerHTML;
-  setLoading('result-encode-file', btn);
-
+  const btn  = document.querySelector('#tab-file .op-btn.teal');
+  const orig = loading(btn);
   try {
     const cover  = document.getElementById('cover-file-img').files[0];
     const secret = document.getElementById('secret-file-input').files[0];
-    if (!cover)  return showError('result-encode-file', 'Please select a cover image.');
-    if (!secret) return showError('result-encode-file', 'Please select a file to hide.');
+    if (!cover)  return err('result-encode-file', 'Select a cover image.');
+    if (!secret) return err('result-encode-file', 'Select the file to hide.');
 
     const fd = new FormData();
     fd.append('cover', cover); fd.append('secret', secret);
+    const d = await post('/api/encode-file', fd);
+    if (d.error) return err('result-encode-file', d.error);
 
-    const data = await postForm('/api/encode-file', fd);
-    if (data.error) return showError('result-encode-file', data.error);
-
-    showSuccess('result-encode-file', [
-      ['Hidden file',    data.filename],
-      ['File size',      formatBytes(data.file_size)],
-      ['Capacity used',  data.usage_pct + '%'],
-      ['Output file',    data.file],
-    ], data.file);
-  } catch (e) {
-    showError('result-encode-file', e.message);
-  } finally {
-    resetBtn(btn, orig);
-  }
+    ok('result-encode-file', [
+      ['HIDDEN FILE',    d.filename],
+      ['FILE SIZE',      fmtBytes(d.file_size)],
+      ['CAPACITY USED',  d.usage_pct + '%'],
+      ['OUTPUT',         d.file],
+    ], d.file);
+  } catch(e) { err('result-encode-file', e.message); }
+  finally    { restore(btn, orig); }
 }
 
-// ── DECODE FILE ───────────────────────────────────────────────────────────
+// ── DECODE FILE ────────────────────────────────────────────────────────────
 async function decodeFile() {
-  const btn = document.querySelector('#decode-file .btn');
-  const orig = btn.innerHTML;
-  setLoading('result-decode-file', btn);
-
+  const btn  = document.querySelector('#tab-file .op-btn.gold');
+  const orig = loading(btn);
   try {
     const stego = document.getElementById('stego-file-img').files[0];
-    if (!stego) return showError('result-decode-file', 'Please select a stego image.');
+    if (!stego) return err('result-decode-file', 'Select the stego image.');
 
     const fd = new FormData();
     fd.append('stego', stego);
+    const d = await post('/api/decode-file', fd);
+    if (d.error) return err('result-decode-file', d.error);
 
-    const data = await postForm('/api/decode-file', fd);
-    if (data.error) return showError('result-decode-file', data.error);
-
-    showSuccess('result-decode-file', [
-      ['Filename',  data.filename],
-      ['File size', formatBytes(data.file_size)],
-    ], data.file);
-  } catch (e) {
-    showError('result-decode-file', e.message);
-  } finally {
-    resetBtn(btn, orig);
-  }
+    ok('result-decode-file', [
+      ['FILENAME',  d.filename],
+      ['FILE SIZE', fmtBytes(d.file_size)],
+    ], d.file, true);
+  } catch(e) { err('result-decode-file', e.message); }
+  finally    { restore(btn, orig); }
 }
 
-// ── ANALYZE ───────────────────────────────────────────────────────────────
-async function analyzeImage() {
-  const btn = document.querySelector('#analyze .btn');
-  const orig = btn.innerHTML;
-  setLoading('result-analyze', btn);
-
-  try {
-    const image = document.getElementById('analyze-file').files[0];
-    if (!image) return showError('result-analyze', 'Please select an image to analyze.');
-
-    const fd = new FormData();
-    fd.append('image', image);
-
-    const data = await postForm('/api/analyze', fd);
-    if (data.error) return showError('result-analyze', data.error);
-
-    const v = data.final_verdict;
-    const lsb = data.lsb_analysis;
-    const chi = data.chi_square;
-
-    let html = `<div class="result-success">
-      <span class="analysis-verdict verdict-${v}">${v.replace('_', ' ')}</span>
-      <div class="result-row">
-        <span class="result-label">Confidence</span>
-        <span class="result-value">${data.confidence}%</span>
-      </div>
-      <div class="result-row">
-        <span class="result-label">Summary</span>
-        <span class="result-value">${data.summary}</span>
-      </div>
-
-      <div class="analysis-section">
-        <h4>LSB ENTROPY ANALYSIS</h4>
-        <div class="result-row">
-          <span class="result-label">Avg entropy</span>
-          <span class="result-value">${lsb.avg_entropy} <span style="color:var(--text-dim);font-size:.8rem">(>0.97 = suspicious)</span></span>
-        </div>`;
-
-    for (const [ch, d] of Object.entries(lsb.channels)) {
-      const flag = d.verdict === 'suspicious' ? '<span class="ch-flag-sus">⚠ suspicious</span>' : '<span class="ch-flag-ok">✓ normal</span>';
-      html += `<div class="ch-row">
-        <span class="ch-name">${ch}</span>
-        <span>entropy: ${d.entropy}</span>
-        <span>ones: ${d.ones_pct}%</span>
-        ${flag}
-      </div>`;
-    }
-
-    html += `</div><div class="analysis-section">
-        <h4>CHI-SQUARE STATISTICAL TEST</h4>
-        <div class="result-row">
-          <span class="result-label">Suspicious channels</span>
-          <span class="result-value">${chi.suspicious_channels}/3</span>
-        </div>
-        <div class="result-row">
-          <span class="result-label">Avg p-value</span>
-          <span class="result-value">${chi.avg_p_value} <span style="color:var(--text-dim);font-size:.8rem">(&lt;0.05 = suspicious)</span></span>
-        </div>`;
-
-    for (const [ch, d] of Object.entries(chi.channels)) {
-      const flag = d.verdict === 'suspicious' ? '<span class="ch-flag-sus">⚠ suspicious</span>' : '<span class="ch-flag-ok">✓ normal</span>';
-      html += `<div class="ch-row">
-        <span class="ch-name">${ch}</span>
-        <span>χ²=${d.chi_square}</span>
-        <span>p=${d.p_value}</span>
-        ${flag}
-      </div>`;
-    }
-
-    html += `</div></div>`;
-    document.getElementById('result-analyze').innerHTML = html;
-
-  } catch (e) {
-    showError('result-analyze', e.message);
-  } finally {
-    resetBtn(btn, orig);
-  }
-}
-
-// ── KEY GENERATION ────────────────────────────────────────────────────────
+// ── KEY GENERATION ─────────────────────────────────────────────────────────
 async function generateKeys() {
-  const btn = document.querySelector('#keygen .btn');
-  const orig = btn.innerHTML;
-  setLoading('result-keygen', btn);
-
+  const btn  = document.querySelector('#tab-keys .op-btn');
+  const orig = loading(btn);
   try {
-    const data = await postForm('/api/keygen', new FormData());
-    if (data.error) return showError('result-keygen', data.error);
+    const d = await post('/api/keygen', new FormData());
+    if (d.error) return err('result-keygen', d.error);
 
     document.getElementById('result-keygen').innerHTML = `
-      <div class="result-success">
-        <div class="result-title ok">✅ Key Pair Generated</div>
-        <div class="result-row">
-          <span class="result-label">Algorithm</span>
-          <span class="result-value">RSA-2048 + AES-256-GCM</span>
+      <div class="result-ok">
+        <div class="result-title teal">◆ KEY PAIR FORGED</div>
+        <div class="result-row"><span class="rl">ALGORITHM</span><span class="rv">RSA-2048 + AES-256-GCM</span></div>
+
+        <div style="margin-top:1rem">
+          <div style="font-size:.65rem;letter-spacing:.1em;color:var(--teal);margin-bottom:.3rem">◈ PUBLIC KEY — SHARE THIS</div>
+          <div class="key-pem-box">${esc(d.public_pem)}</div>
+          <a class="dl-btn" href="/download/${encodeURIComponent(d.public_key)}" download style="margin-top:.5rem">⬇ DOWNLOAD PUBLIC.PEM</a>
         </div>
 
         <div style="margin-top:1rem">
-          <div style="font-weight:700;color:#fff;margin-bottom:.4rem">🔑 Public Key (share this)</div>
-          <div class="key-box">${escapeHtml(data.public_pem)}</div>
-          <a class="download-btn" href="/download/${encodeURIComponent(data.public_key)}" download style="margin-top:.5rem">
-            ⬇ Download public.pem
-          </a>
-        </div>
-
-        <div style="margin-top:1rem">
-          <div style="font-weight:700;color:#ff4444;margin-bottom:.4rem">🔒 Private Key (keep secret!)</div>
-          <div class="key-box">${escapeHtml(data.private_pem)}</div>
-          <a class="download-btn" href="/download/${encodeURIComponent(data.private_key)}" download style="margin-top:.5rem;background:var(--red);color:#fff">
-            ⬇ Download private.pem
-          </a>
+          <div style="font-size:.65rem;letter-spacing:.1em;color:var(--gold);margin-bottom:.3rem">⬡ PRIVATE KEY — KEEP SECRET</div>
+          <div class="key-pem-box">${esc(d.private_pem)}</div>
+          <a class="dl-btn" href="/download/${encodeURIComponent(d.private_key)}" download style="margin-top:.5rem;background:var(--gold-dim);color:var(--gold);border-color:rgba(240,180,41,0.3)">⬇ DOWNLOAD PRIVATE.PEM</a>
         </div>
       </div>`;
-  } catch (e) {
-    showError('result-keygen', e.message);
-  } finally {
-    resetBtn(btn, orig);
-  }
-}
-
-// ── Utils ─────────────────────────────────────────────────────────────────
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  } catch(e) { err('result-keygen', e.message); }
+  finally    { restore(btn, orig); }
 }
