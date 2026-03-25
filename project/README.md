@@ -5,7 +5,7 @@ Hide text, images, and files inside ordinary images using LSB steganography with
 ## ⚡ Quick Start
 
 ```bash
-git clone https://github.com/arsj7002/stego-tool.git
+git clone https://github.com/arsj7002-hue/stego-tool.git
 cd stego-tool
 pip install -r requirements.txt
 python app.py
